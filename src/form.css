@@ -19,7 +19,8 @@
 
 .title {
   background-color: #C6EBC5;
-  padding: 12px
+  padding: 12px 12px 20px;
+  position: relative;
 }
 
 .input-field {
@@ -48,4 +49,9 @@
 
 .topping input{
   margin: 12px;
+ }
+
+ .error {
+  color: red;
+  position: absolute;
  }

@@ -2,9 +2,13 @@ import React, { useState, useEffect } from "react";
 import "./form.css";
 import * as yup from "yup";
 import pizzaPic from "./Assets/Pizza.jpg";
+import axios from "axios";
 
 let schema = yup.object().shape({
-  isim: yup.string().required("İsim en az 2 karakter olmalıdır"),
+  isim: yup
+    .string()
+    .min(2, "İsim en az 2 karakter olmalıdır")
+    .required("Required"),
   boyut: yup.string().required("Required"),
   malzeme1: yup.string().required("Required"),
   malzeme2: yup.string().required("Required"),
@@ -14,49 +18,99 @@ export default function Form(props) {
   const [form, setForm] = useState({
     isim: "",
     boyut: "",
+    malzeme1: "false",
+    malzeme2: "",
+  });
+  const [errors, setErrors] = useState({
+    isim: "",
+    boyut: "",
     malzeme1: "",
     malzeme2: "",
   });
+  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [disabled, setDisabled] = useState(false);
 
-  const [disabled, setDisabled] = useState(true);
+  const [userId, setUserId] = useState("");
 
   useEffect(() => {
-    schema.isValid(form).then((valid) => {
-      setDisabled(!valid);
-    });
-  }, [form]);
+    if (formSubmitted) {
+      schema
+        .validate(form, { abortEarly: false })
+        .then((valid) => {
+          console.log(valid.inner);
+        })
+        .catch((err) => {
+          const errors = {};
+          err.inner.forEach((item) => {
+            errors[item.path] = item.message;
+          });
+          setErrors(errors);
+        });
+    }
+  }, [form, formSubmitted]);
 
   const handleInputChange = (event) => {
-    console.log(event);
     const valueToUse =
       event.target.type === "checkbox"
         ? event.target.checked
         : event.target.value;
     const fieldName = event.target.name;
+
     setForm({ ...form, [fieldName]: valueToUse });
   };
 
   const handleSubmit = (event) => {
+    setFormSubmitted(true);
     event.preventDefault();
-    console.log("form", form);
+
+    if (schema.isValidSync(form)) {
+      console.log("form", form);
+
+      //yeni bir kullanıcı objesi
+      const newUser = {
+        isim: form.isim.trim(),
+        boyut: form.boyut,
+        malzeme1: form.malzeme1,
+        malzeme2: form.malzeme2,
+      };
+
+      axios
+        .post("https://reqres.in/api/user", newUser)
+        .then((res) => {
+          setUserId(res.data.id);
+
+          setForm({
+            isim: "",
+            boyut: "",
+            malzeme1: false,
+            malzeme2: "",
+          });
+        })
+        .catch((err) => {
+          debugger;
+        });
+    } else {
+      setDisabled(true);
+    }
   };
 
   return (
     //1) id'si pizza form olan bir form tag ile başladım.
-    <div className="pizzasec">                                      
+    <div className="pizzasec">
       <form id="pizza-form">
         <h1>Build Your Own Pizza: </h1>
         <img src={pizzaPic} className="pizzaPic" />
 
         <div className="title">
           <label htmlFor="name-input">
-            <h2>İsim</h2>
+            <h2>Name</h2>
           </label>
+          <div className="error">{errors.isim}</div>
         </div>
 
         <div className="form-field">
           <input
-            placeholder="İsim"
+            placeholder="Name"
             id="name-input"
             name="isim"
             className="input-field"
@@ -69,6 +123,7 @@ export default function Form(props) {
           <label htmlFor="boyut">
             <h2>Choice of Size</h2>
           </label>
+          <div className="error">{errors.boyut}</div>
         </div>
         <div className="form-field">
           <select
@@ -87,6 +142,7 @@ export default function Form(props) {
 
         <div className="title">
           <h2>Choice of Sauce</h2>
+          <div className="error">{errors.malzeme1}</div>
         </div>
         <div className="sossec">
           <label>
@@ -123,6 +179,7 @@ export default function Form(props) {
 
         <div className="title">
           <h2>Add Topings</h2>
+          <div className="error">{errors.malzeme2}</div>
         </div>
         <div className="topping">
           <label htmlFor="malzeme2">
@@ -202,8 +259,8 @@ export default function Form(props) {
           id="order-button"
           type="submit"
           value="Siparişlere Ekle"
-          disabled={disabled}
           onClick={handleSubmit}
+          disabled={disabled}
         />
       </form>
     </div>
